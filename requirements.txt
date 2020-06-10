@@ -1,0 +1,18 @@
+@insmod
+	-> Announce @dmesg
+	-> (Init)
+@rmmod
+	-> Announce @dmesg
+	-> (Free+Deint)
+@cat
+	-> Announce @dmesg
+	-> Check BSY :: @OK[],@ERR[Announce @dmesg;return -EBUSY]
+	-> Return string: "DD. M hh:mm:ss YYYY"
+@echo
+	-> Announce @dmesg
+	-> Check BSY :: @OK[],@ERR[Announce @dmesg;return -EBUSY]
+	-> Read string "YYYY-MM-DD hh:mm::ss"
+	-> Check format :: @OK[],@ERR[return -EINVAL]
+	-> Check overflow :: @OK[],@ERR[return -EOVERFLOW]
+	-> Check correct bounds :: @OK[set RTC],@ERR[return -ENOEXEC]
+

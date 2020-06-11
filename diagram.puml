@@ -1,0 +1,71 @@
+@startuml
+
+:**Read Date**;
+if (Is already accessed) then (yes)
+	:Return -EBUSY;
+	stop
+endif
+:Set access flag ((_Atomic));
+:**Poll Status**;
+:Write to dmesg;
+:Read Registers;
+:Parse Registers;
+:Print Date;
+:Release Access flag;
+:Return SUCCESS;
+stop
+
+:**Write Date**;
+if (Is already accessed) then (yes)
+	:Return -EBUSY;
+	stop
+endif
+:Set access flag ((_Atomic));
+:Read "YYYY-MM-DD hh:mm:ss" from in;
+:**Check Input**;
+:**Parse Input**;
+:Write data;
+:Release Access flag;
+:Return SUCCESS;
+stop
+
+
+:**Check OSF**;
+if (OSF) then (is 1)
+	:Enable EOSC;
+	:Reset OSF;
+	:Write to dmesg;
+	:Return true;
+	stop
+endif
+:Return false;
+stop
+
+
+:**Poll Status**;
+:Read Status Register (0F);
+:Extract **OSF** and **BSY** from status register;
+:Read Temperature MSB Register (11);
+:Save Temperature as MSB(int8_t);
+
+if (**Check OSF**) then (true)
+	:Exit with -EAGAIN;
+	stop
+endif
+if (TEMP) then (is greater than 80° or lower than -40°)
+	:Write to dmesg;
+endif
+stop
+
+
+:**Setup**;
+:Write to dmesg;
+:Disable Alarms;
+:Disable Interrupts;
+:Write to dmesg;
+:Enable 24hr clock;
+:Write to dmesg;
+:**Check OSF**;
+:Return SUCCESS;
+stop
+@enduml

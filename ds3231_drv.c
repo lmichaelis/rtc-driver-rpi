@@ -27,19 +27,19 @@ static int __init ds3231_drv_init(void) {
         return rval;
     }
 
-    rval = ds3231_io_init();
-    if (rval < 0) {
-        ds3231_hw_exit();
-    }
+    //rval = ds3231_io_init();
+    //if (rval < 0) {
+    //  ds3231_hw_exit();
+    //}
 
-    return rval;
+    //return rval;
 }
 
 /**
  * Driver uninitialization.
  */
 static int __init ds3231_drv_exit(void) {
-    ds3231_io_exit();
+    // ds3231_io_exit();
     ds3231_hw_exit();
     return 0;
 }

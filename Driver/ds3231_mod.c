@@ -18,6 +18,8 @@
  ****************************************************/
 #include "ds3231.h"
 
+ds3231_status_t ds3231_status
+
 /**
  * Driver initialization.
  */
@@ -27,20 +29,19 @@ static int __init ds3231_drv_init(void) {
         return rval;
     }
 
-    return 0;
-    //rval = ds3231_io_init();
-    //if (rval < 0) {
-    //  ds3231_hw_exit();
-    //}
+    rval = ds3231_io_init();
+    if (rval < 0) {
+      ds3231_hw_exit();
+    }
 
-    //return rval;
+    return rval;
 }
 
 /**
  * Driver uninitialization.
  */
 static void __exit ds3231_drv_exit(void) {
-    // ds3231_io_exit();
+    ds3231_io_exit();
     ds3231_hw_exit();
 }
 

@@ -7,9 +7,9 @@ else
 KDIR	:= /lib/modules/$(shell uname -r)/build
 PWD	:= $(shell pwd)
 
-default: ds3231
+default: ds3231_drv
 
-ds3231:
+ds3231_drv:
 	@echo "Building module ..."
 	@(cd $(KDIR) && make -C $(KDIR) SUBDIRS=$(PWD) modules)
 
@@ -18,9 +18,9 @@ clean:
 	-rm -rf .tmp_versions
 	-rm -rf *~
 
-reload: ds3231
-	-sudo rmmod ds3231
-	sudo insmod ds3231.ko
+reload: ds3231_drv
+	-sudo rmmod ds3231_drv
+	sudo insmod ds3231_drv.ko
 
 test: reload
 	cat /dev/ds3231

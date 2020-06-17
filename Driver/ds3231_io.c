@@ -1,7 +1,7 @@
 /****************************************************
  * ( ) ds3231_hw.c  :: Hardware interfacing         *
  * (*) ds3231_io.c  :: Character device interfacing *
- * ( ) ds3231_drv.c :: Linux module handling        *
+ * ( ) ds3231_mod.c :: Linux module handling        *
  ****************************************************/
 #include "ds3231.h"
 

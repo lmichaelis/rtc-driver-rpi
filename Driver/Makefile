@@ -1,6 +1,6 @@
 ifneq ($(KERNELVERSION),)
-obj-m	:= ds3231.o
-ds3231-objs :=  ds3231_drv.o ds3231_hw.o ds3231_io.o
+obj-m	:= ds3231_drv.o
+ds3231_drv-objs :=  ds3231_mod.o ds3231_hw.o ds3231_io.o
 
 
 else

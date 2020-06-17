@@ -14,7 +14,7 @@
 /****************************************************
  * ( ) ds3231_hw.c  :: Hardware interfacing         *
  * ( ) ds3231_io.c  :: Character device interfacing *
- * (*) ds3231_drv.c :: Linux module handling        *
+ * (*) ds3231_mod.c :: Linux module handling        *
  ****************************************************/
 #include "ds3231.h"
 
@@ -27,6 +27,7 @@ static int __init ds3231_drv_init(void) {
         return rval;
     }
 
+    return 0;
     //rval = ds3231_io_init();
     //if (rval < 0) {
     //  ds3231_hw_exit();
@@ -38,10 +39,9 @@ static int __init ds3231_drv_init(void) {
 /**
  * Driver uninitialization.
  */
-static int __init ds3231_drv_exit(void) {
+static void __exit ds3231_drv_exit(void) {
     // ds3231_io_exit();
     ds3231_hw_exit();
-    return 0;
 }
 
 module_init(ds3231_drv_init);

@@ -18,7 +18,7 @@
  ****************************************************/
 #include "ds3231.h"
 
-ds3231_status_t ds3231_status
+ds3231_status_t ds3231_status;
 
 /**
  * Driver initialization.

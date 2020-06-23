@@ -88,25 +88,94 @@ int ds3231_io_close(struct inode *inode, struct file *file)
     return 0;
 }
 
-ssize_t ds3231_io_read(struct file *file, char __user *buffer, size_t bytes, loff_t *offset)
+/*
+
+Q: Welche Kernel-Funktionen?
+A: All
+
+Q: BSY handling?
+A: None
+
+Q: Offset Stuff
+A: None
+
+------------------------------
+Things to keep in mind:
+
+- Leap year compensation only up to 2100
+- Leap year checking in input
+
+*/
+
+static const char *MONTH_NAMES[] = {
+    "Januar",
+    "Februar",
+    "Maerz",
+    "April",
+    "Mai",
+    "Juni",
+    "Juli",
+    "August",
+    "September",
+    "Oktober",
+    "November",
+    "Dezember" };
+
+static const int MONTH_DAYS[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
+ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, loff_t *offset)
 {
+    ds3231_time_t time;
+    ds3231_read_time(&time);
+    char out[4 /* "DD. " */ + 10 /* "M " */ + 13 /* "hh:mm:ss YYYY" */ + 1 /* \0 */];
+    int bytes_to_copy = bytes > sizeof(out) ? sizeof(out) : bytes;
+    out[sizeof(out) - 1] = '\0';
+
+    snprintf(out, sizeof(out), "%2d. %s %2d:%2d:%2d %4d", time.day, MONTH_NAMES[time.month - 1], time.hour, time.minute, time.second, time.year);
+    printk("ds3231: read time: %.*s\n", sizeof(out), out);
     
+    return copy_to_user(buffer, out, bytes_to_copy);
 }
 
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset)
 {
-    /* YYYY-MM-DD hh:mm:ss */
-    /**
-     * Check length == 19
-     * buffer[4] = '\0'
-     * 
-     * 
-     */
-    int res, rval;
-    rval = kstrtoint(buffer + 0, 10, &res);
+    ds3231_time_t time;
+    s32 year, month, day, hour, minute, second;
+    char in[bytes];
 
-    if (rval < 0)
-        return rval;
+    copy_from_user(in, buffer, bytes);
 
-    kstrtoint(buffer + 5, 10, &res);
+
+    if (sscanf(in, "%d-%d-%d %d:%d:%d", 
+                &year, 
+                &month, 
+                &day, 
+                &hour, 
+                &minute, 
+                &second) < 0) {
+        return -EINVAL;
+    }
+
+    if ((12 < month || 1 > month) || 
+        (MONTH_DAYS[month - 1] + (month == 2 ? (year % 4 == 0): 0) < day) || 
+        (23 < hour || 0 > hour) || 
+        (59 < minute || 0 > minute) ||
+        (59 < second || 0 > second))
+    {
+        return -ENOEXEC;
+    }
+
+    if (!(2199 < year || 2000 > year)) {
+        return -EOVERFLOW;
+    }
+
+    time.year = year;
+    time.month = month;
+    time.day = day;
+    time.hour = hour;
+    time.minute = minute;
+    time.second = second;
+
+    ds3231_write_time(&time);
+    return 0;
 }

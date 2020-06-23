@@ -37,40 +37,40 @@
 #define DS3231_REG_TEMPLSB		0x12
 
 /* Register Mask Definitions */
-#define DS3231_MASK_SECONDS     0b00001111
-#define DS3231_MASK_10_SECONDS  0b01110000
-#define DS3231_MASK_MINUTES     0b00001111
-#define DS3231_MASK_10_MINUTES  0b01110000
-#define DS3231_MASK_HOUR        0b00001111
-#define DS3231_MASK_10_HOUR     0b00010000
-#define DS3231_MASK_20_HOUR     0b00100000
-#define DS3231_MASK_HOUR_SELECT 0b01000000
-#define DS3231_MASK_DATE        0b00001111
-#define DS3231_MASK_10_DATE     0b00110000
-#define DS3231_MASK_MONTH       0b00001111
-#define DS3231_MASK_10_MONTH    0b00010000
-#define DS3231_MASK_CENTURY     0b10000000
-#define DS3231_MASK_YEAR        0b00001111
-#define DS3231_MASK_10_YEAR     0b11110000
+#define DS3231_MASK_SECONDS     0b00001111u
+#define DS3231_MASK_10_SECONDS  0b01110000u
+#define DS3231_MASK_MINUTES     0b00001111u
+#define DS3231_MASK_10_MINUTES  0b01110000u
+#define DS3231_MASK_HOUR        0b00001111u
+#define DS3231_MASK_10_HOUR     0b00010000u
+#define DS3231_MASK_20_HOUR     0b00100000u
+#define DS3231_MASK_HOUR_SELECT 0b01000000u
+#define DS3231_MASK_DATE        0b00001111u
+#define DS3231_MASK_10_DATE     0b00110000u
+#define DS3231_MASK_MONTH       0b00001111u
+#define DS3231_MASK_10_MONTH    0b00010000u
+#define DS3231_MASK_CENTURY     0b10000000u
+#define DS3231_MASK_YEAR        0b00001111u
+#define DS3231_MASK_10_YEAR     0b11110000u
 
-#define DS3231_MASK_EOSC       0b10000000
-#define DS3231_MASK_INTCN      0b00000100
-#define DS3231_MASK_A2IE       0b00000010
-#define DS3231_MASK_A1IE       0b00000001
-#define DS3231_MASK_OSF        0b10000000
-#define DS3231_MASK_BSY        0b00000100
+#define DS3231_MASK_EOSC       0b10000000u
+#define DS3231_MASK_INTCN      0b00000100u
+#define DS3231_MASK_A2IE       0b00000010u
+#define DS3231_MASK_A1IE       0b00000001u
+#define DS3231_MASK_OSF        0b10000000u
+#define DS3231_MASK_BSY        0b00000100u
 
 typedef struct _ds3231_time {
-    u8 seconds;
-    u8 minutes;
+    u8 second;
+    u8 minute;
     u8 hour;
 
     u8 month;
     u8 day;
-    u8 year;
+    u16 year;
 } ds3231_time_t;
 
-typedef strict _ds3231_status {
+typedef struct _ds3231_status {
     u8 rtc_busy;
     u8 drv_busy;
     u8 osf;

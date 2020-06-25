@@ -89,7 +89,7 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
     data = i2c_smbus_read_byte_data(client, DS3231_REG_CONTROL);
     if (data < 0)
     {
-        // Failed to read control register
+        goto failed_to_comm;
     }
 
     reg = (u8)data;
@@ -99,7 +99,12 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
         reg &= ~DS3231_MASK_A2IE;
         reg &= ~DS3231_MASK_INTCN;
         reg &= ~DS3231_MASK_EOSC;
-        i2c_smbus_write_byte_data(client, DS3231_REG_CONTROL, reg);
+
+        if (i2c_smbus_write_byte_data(client, DS3231_REG_CONTROL, reg) < 0)
+        {
+            goto failed_to_comm;
+        }
+
         printk("ds3231: disabled alarm1, alarm2, interrupts; enabled oscillator.\n");
     }
     /*
@@ -109,14 +114,20 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
     data = i2c_smbus_read_byte_data(client, DS3231_REG_STATUS);
     if (data < 0)
     {
-        // Failed to read status register
+        goto failed_to_comm;
     }
 
     reg = (u8)data;
     if (reg & DS3231_MASK_OSF)
     {
         reg &= ~DS3231_MASK_OSF;
-        i2c_smbus_write_byte_data(client, DS3231_REG_STATUS, reg);
+
+        if (i2c_smbus_write_byte_data(client, DS3231_REG_STATUS, reg) < 0)
+        {
+            goto failed_to_comm;
+            ;
+        }
+
         printk("ds3231: reset oscillator stop flag (oscillator was stopped).\n");
     }
 
@@ -127,18 +138,27 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
     data = i2c_smbus_read_byte_data(client, DS3231_REG_HOURS);
     if (data < 0)
     {
-        // Failed to read status register
+        goto failed_to_comm;
     }
 
     reg = (u8)data;
     if (reg & DS3231_MASK_HOUR_SELECT)
     {
         reg &= ~DS3231_MASK_HOUR_SELECT;
-        i2c_smbus_write_byte_data(client, DS3231_REG_HOURS, reg);
+
+        if (i2c_smbus_write_byte_data(client, DS3231_REG_HOURS, reg) < 0)
+        {
+            goto failed_to_comm;
+        }
+
         printk("ds3231: set to 24 hour format.\n");
     }
 
     return 0;
+
+failed_to_comm:
+    printk(KERN_ERR "ds3231: device could not be communicated with\n");
+    return -ENODEV;
 }
 
 int ds3231_hw_remove(struct i2c_client *client)
@@ -147,8 +167,34 @@ int ds3231_hw_remove(struct i2c_client *client)
     return 0;
 }
 
+#define RETURN_IF_LTZ(x, y) \
+    y = x;                  \
+    if (y < 0)              \
+    {                       \
+        return y;           \
+    }
+
 int ds3231_write_time(ds3231_time_t *time)
 {
+    u8 secs, mins, hrs, date, mon, year;
+    int retval;
+
+    secs = ((time->second / 10) << 4) | (time->second % 10);
+    mins = ((time->minute / 10) << 4) | (time->minute % 10);
+    hrs = ((time->hour / 20) << 5) | (((time->hour % 20) / 10) << 4) | ((time->hour % 20) % 10);
+    date = ((time->day / 10) << 4) | (time->day % 10);
+    mon = ((time->year / 100) << 7) | ((time->month / 10) << 4) | ((time->month % 10));
+    year = (((time->year % 100) / 10) << 4) | ((time->year % 100) % 10);
+
+    printk("ds3231: raw = %d, %d, %d, %d, %d, %d\n", secs, mins, hrs, date, mon, year);
+
+    /* Write to the RTC */
+    RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_SECONDS, secs), retval);
+    RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_MINUTES, mins), retval);
+    RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_HOURS, hrs), retval);
+    RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_DATE, date), retval);
+    RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_MONTH, mon), retval);
+    RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_YEAR, year), retval);
     return 0;
 }
 
@@ -157,37 +203,20 @@ int ds3231_read_time(ds3231_time_t *time)
     s32 reg_secs, reg_mins, reg_hrs, reg_date, reg_mon, reg_year;
     u8 secs, mins, hrs, date, mon, year;
 
-    reg_secs = i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_SECONDS);
-    reg_mins = i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_MINUTES);
-    reg_hrs = i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_HOURS);
-    reg_date = i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_DATE);
-    reg_mon = i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_MONTH);
-    reg_year = i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_YEAR);
+    /* Read from the RTC */
+    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_SECONDS), reg_secs);
+    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_MINUTES), reg_mins);
+    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_HOURS), reg_hrs);
+    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_DATE), reg_date);
+    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_MONTH), reg_mon);
+    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_YEAR), reg_year);
 
-    if (reg_secs < 0 || reg_mins < 0 || reg_hrs < 0 || reg_date < 0 || reg_mon < 0 || reg_year < 0)
-    {
-        return -ENODEV;
-    }
-    
     secs = (u8)reg_secs;
     mins = (u8)reg_mins;
     hrs = (u8)reg_hrs;
     date = (u8)reg_date;
     mon = (u8)reg_mon;
     year = (u8)reg_year;
-
-    // 0b01000101
-    // 
-
-
-    printk(KERN_DEBUG "%d, %d, %d, %d, %d, %d\n", secs, mins, hrs, date, mon, year);
-    printk(KERN_DEBUG "(%d, %d), (%d, %d), (%d, %d, %d), (%d, %d), (%d, %d), (%d, %d, %d)\n", 
-                        (secs >> 4), (secs & DS3231_MASK_SECONDS), 
-                        (mins >> 4), (mins & DS3231_MASK_MINUTES), 
-                        ((hrs >> 5) & 1), ((hrs >> 4) & 1), (hrs & DS3231_MASK_HOUR),
-                        (date >> 4), (date & DS3231_MASK_DATE),
-                        ((mon >> 4) & 1), (mon & DS3231_MASK_MONTH), 
-                        (mon >> 7), (year >> 4), (year & DS3231_MASK_YEAR));
 
     time->second = 10 * (secs >> 4) + (secs & DS3231_MASK_SECONDS);
     time->minute = 10 * (mins >> 4) + (mins & DS3231_MASK_MINUTES);
@@ -197,4 +226,38 @@ int ds3231_read_time(ds3231_time_t *time)
     time->year = 2000 + 100 * (mon >> 7) + 10 * (year >> 4) + (year & DS3231_MASK_YEAR);
 
     return 0;
+}
+
+/* Whoever this reads is a donkey */
+
+int ds3231_read_status(void)
+{
+    s32 reg_status, reg_temp;
+    u8 status, control;
+    int retval = 0;
+
+    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_STATUS), reg_status);
+    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_TEMPMSB), reg_temp);
+
+    status = (u8)reg_status;
+    ds3231_status.temp = (s8)reg_temp; 
+
+    ds3231_status.osf = (status >> 7);
+    ds3231_status.rtc_busy = ((status & DS3231_MASK_BSY) << 1);
+
+    if (ds3231_status.osf)
+    {
+        printk("ds3231: oscillator stopped. restarting ...\n");
+        control = i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_CONTROL);
+        RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_CONTROL, (control | DS3231_MASK_EOSC)), retval);
+        RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_STATUS, (status & (~DS3231_MASK_OSF))), retval);
+        return -EAGAIN;
+    }
+
+    if ((ds3231_status.temp > 85) || (ds3231_status.temp < -40))
+    {
+        printk("ds3231: temperature warning: %d°C\n", ds3231_status.temp);
+    }
+
+    return retval;
 }

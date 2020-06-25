@@ -51,7 +51,7 @@ int ds3231_io_init(void)
         goto cleanup_chrdev_class;
     }
     /* ds3231_drv initialized sucsessfully */
-    printk("ds3231: character device driver sucsessfully created\n");
+    printk("ds3231: character device driver successfully created\n");
 
     return 0;
 
@@ -90,16 +90,6 @@ int ds3231_io_close(struct inode *inode, struct file *file)
 
 /*
 
-Q: Welche Kernel-Funktionen?
-A: All
-
-Q: BSY handling?
-A: None
-
-Q: Offset Stuff
-A: None
-
-------------------------------
 Things to keep in mind:
 
 - Leap year compensation only up to 2100
@@ -126,26 +116,71 @@ static const int MONTH_DAYS[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, loff_t *offset)
 {
     ds3231_time_t time;
-    ds3231_read_time(&time);
-    char out[4 /* "DD. " */ + 10 /* "M " */ + 13 /* "hh:mm:ss YYYY" */ + 1 /* \0 */];
-    int bytes_to_copy = bytes > sizeof(out) ? sizeof(out) : bytes;
-    out[sizeof(out) - 1] = '\0';
+    char out[28];
+    int bytes_to_copy = (bytes > sizeof(out) ? sizeof(out) : bytes);
+    int retval;
 
-    snprintf(out, sizeof(out), "%2d. %s %2d:%2d:%2d %4d", time.day, MONTH_NAMES[time.month - 1], time.hour, time.minute, time.second, time.year);
+    /* Make sure the I2C bus is not in use. */
+    if (atomic_cmpxchg(&ds3231_status.drv_busy, UNLOCKED, LOCKED) == LOCKED) {
+        printk(KERN_ERR "ds3231: device busy\n");
+        return -EBUSY;
+    }
+
+    /* Read the status register of the RTC */
+    retval = ds3231_read_status();
+    if (retval < 0) {
+        atomic_set(&ds3231_status.drv_busy, UNLOCKED);
+        return retval;
+    }
+
+    /* Read the time from the RTC */
+    ds3231_read_time(&time);
+
+    /* Bring the time into the correct format */
+    memset(out, '\0', sizeof(out));
+    snprintf(out, sizeof(out) - 1, "%02d. %s %02d:%02d:%02d %04d", time.day, MONTH_NAMES[time.month - 1], time.hour, time.minute, time.second, time.year);
     printk("ds3231: read time: %.*s\n", sizeof(out), out);
-    
-    return copy_to_user(buffer, out, bytes_to_copy);
+
+    atomic_set(&ds3231_status.drv_busy, UNLOCKED);
+    return bytes_to_copy - copy_to_user(buffer, out, bytes_to_copy);
 }
 
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset)
 {
     ds3231_time_t time;
-    s32 year, month, day, hour, minute, second;
+    s32 year, month, day, hour, minute, second, temp;
+    int retval = 0;
     char in[bytes];
 
-    copy_from_user(in, buffer, bytes);
+    /* Make sure the I2C bus is not in use.  */
+    if (atomic_cmpxchg(&ds3231_status.drv_busy, UNLOCKED, LOCKED) == LOCKED) {
+        printk(KERN_ERR "ds3231: device busy\n");
+        return -EBUSY;
+    }
 
+    /* Get data from the user */
+    (void) copy_from_user(in, buffer, bytes);
 
+    if (in[0] == '$') {
+        if (sscanf(in + 1, "%d", &temp) < 0) {
+            atomic_set(&ds3231_status.drv_busy, UNLOCKED);
+            return -ENOEXEC;
+        }
+
+        printk(KERN_ERR "ds3231: manual temperature override: %d°C\n", temp);
+        ds3231_status.temp = (s8) temp;
+        atomic_set(&ds3231_status.drv_busy, UNLOCKED);
+        return bytes;
+    }
+
+    /* Read the status register of the RTC */
+    retval = ds3231_read_status();
+    if (retval < 0) {
+        atomic_set(&ds3231_status.drv_busy, UNLOCKED);
+        return retval;
+    }
+
+    /* Parse a date */
     if (sscanf(in, "%d-%d-%d %d:%d:%d", 
                 &year, 
                 &month, 
@@ -153,19 +188,24 @@ ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t byt
                 &hour, 
                 &minute, 
                 &second) < 0) {
+        atomic_set(&ds3231_status.drv_busy, UNLOCKED);
         return -EINVAL;
     }
 
+    /* Make sure month, day of the month, hour, minute and second are in range */
     if ((12 < month || 1 > month) || 
         (MONTH_DAYS[month - 1] + (month == 2 ? (year % 4 == 0): 0) < day) || 
         (23 < hour || 0 > hour) || 
         (59 < minute || 0 > minute) ||
         (59 < second || 0 > second))
     {
+        atomic_set(&ds3231_status.drv_busy, UNLOCKED);
         return -ENOEXEC;
     }
 
-    if (!(2199 < year || 2000 > year)) {
+    /* Make sure the year is in range */
+    if (2199 < year || 2000 > year) {
+        atomic_set(&ds3231_status.drv_busy, UNLOCKED);
         return -EOVERFLOW;
     }
 
@@ -176,6 +216,10 @@ ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t byt
     time.minute = minute;
     time.second = second;
 
-    ds3231_write_time(&time);
-    return 0;
+    printk("ds3231: write time %d. %d. %d %d:%d:%d\n", time.day, time.month, time.year, time.hour, time.minute, time.second);
+    
+    /* Write the time to the RTC */
+    retval = ds3231_write_time(&time);
+    atomic_set(&ds3231_status.drv_busy, UNLOCKED);
+    return retval < 0 ? retval : bytes;
 }

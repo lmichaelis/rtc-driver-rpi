@@ -21,7 +21,9 @@
 ds3231_status_t ds3231_status;
 
 /**
- * Driver initialization.
+ * Registers the driver with the linux kernel and sets up the RTC.
+ * 
+ * @brief Driver initialization.
  */
 static int __init ds3231_drv_init(void) {
     int rval = ds3231_hw_init();

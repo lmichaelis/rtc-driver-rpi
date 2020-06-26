@@ -107,37 +107,3 @@ int ds3231_write_time(ds3231_time_t *time);
 int ds3231_read_time(ds3231_time_t *time);
 
 int ds3231_read_status(void);
-
-
-/**
- * 
- * make[1]: Entering directory '/usr/src/linux-source-rpi2'
-  CC [M]  /home/sysprog-02/ds3231_mod.o
-  CC [M]  /home/sysprog-02/ds3231_hw.o
-/home/sysprog-02/ds3231_hw.c: In function ‘ds3231_read_status’:
-/home/sysprog-02/ds3231_hw.c:237:9: warning: ‘retval’ may be used uninitialized in this function [-Wmaybe-uninitialized]
-     int retval;
-         ^
-  CC [M]  /home/sysprog-02/ds3231_io.o
-/home/sysprog-02/ds3231_io.c: In function ‘ds3231_io_read’:
-/home/sysprog-02/ds3231_io.c:141:5: warning: ISO C90 forbids mixed declarations and code [-Wdeclaration-after-statement]
-     int bytes_to_copy = (bytes > sizeof(out) ? sizeof(out) : bytes);
-     ^
-/home/sysprog-02/ds3231_io.c: In function ‘ds3231_io_write’:
-/home/sysprog-02/ds3231_io.c:165:5: warning: ignoring return value of ‘copy_from_user’, declared with attribute warn_unused_result [-Wunused-result]
-     copy_from_user(in, buffer, bytes);
-     ^
-  LD [M]  /home/sysprog-02/ds3231_drv.o
-  Building modules, stage 2.
-  MODPOST 1 modules
-  CC      /home/sysprog-02/ds3231_drv.mod.o
-  LD [M]  /home/sysprog-02/ds3231_drv.ko
-make[1]: Leaving directory '/usr/src/linux-source-rpi2'
-sudo rmmod ds3231_drv
-rmmod: ERROR: Module ds3231_drv is not currently loaded
-Makefile:22: recipe for target 'reload' failed
-make: [reload] Error 1 (ignored)
-sudo insmod ds3231_drv.ko
-
- * 
- */

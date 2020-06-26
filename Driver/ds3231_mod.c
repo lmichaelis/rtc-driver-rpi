@@ -22,8 +22,16 @@ ds3231_status_t ds3231_status;
 
 /**
  * Registers the driver with the linux kernel and sets up the RTC.
- * 
- * @brief Driver initialization.
+ * It first sets up the RTC hardware and then registers the linux
+ * character device.
+ *
+ * See <tt>ds3231_hw_init(void)</tt> and <tt>ds3231_io_init(void)</tt>
+ * for more information about the setup procedure.
+ *
+ * @see ds3231_hw_init(void)
+ * @see ds3231_io_init(void)
+ *
+ * @brief Initializes the ds3231 RTC driver.
  */
 static int __init ds3231_drv_init(void) {
     int rval = ds3231_hw_init();
@@ -41,7 +49,16 @@ static int __init ds3231_drv_init(void) {
 }
 
 /**
- * Driver uninitialization.
+ * Unregisters the driver from the linux kernel. First it unregisters the
+ * character device, then removes the I2C driver and associated device.
+ *
+ * See <tt>ds3231_hw_exit(void)</tt> and <tt>ds3231_io_exit(void)</tt>
+ * for more information about the unregister procedure.
+ *
+ * @see ds3231_hw_exit(void)
+ * @see ds3231_io_exit(void)
+ *
+ * @brief Uninitializes the ds3231 RTC driver.
  */
 static void __exit ds3231_drv_exit(void) {
     ds3231_io_exit();

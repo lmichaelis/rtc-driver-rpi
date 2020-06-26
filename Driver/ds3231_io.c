@@ -17,86 +17,7 @@ struct file_operations ds3231_fops = {
     .release = ds3231_io_close,
 };
 
-int ds3231_io_init(void)
-{
-    int ret;
-
-    printk("ds3231: creating character device driver ...\n");
-
-    ret = alloc_chrdev_region(&ds3231_dev, 0, 1, "ds3231_drv");
-    if (ret < 0)
-    {
-        printk(KERN_ALERT "ds3231: alloc_chrdev_region() failed\n");
-        return ret;
-    }
-
-    cdev_init(&ds3231_cdev, &ds3231_fops);
-    ret = cdev_add(&ds3231_cdev, ds3231_dev, 1);
-    if (ret < 0)
-    {
-        printk(KERN_ALERT "ds3231: character device could not be registered");
-        goto unreg_chrdev;
-    }
-
-    ds3231_device_class = class_create(THIS_MODULE, "chardev");
-    if (ds3231_device_class == NULL)
-    {
-        printk(KERN_ALERT "ds3231: character device class could not be created\n");
-        goto clenup_cdev;
-    }
-
-    if (device_create(ds3231_device_class, NULL, ds3231_dev, NULL, "ds3231_drv") == NULL)
-    {
-        printk(KERN_ALERT "ds3231: character device could not be created\n");
-        goto cleanup_chrdev_class;
-    }
-    /* ds3231_drv initialized sucsessfully */
-    printk("ds3231: character device driver successfully created\n");
-
-    return 0;
-
-/* Resourcen freigeben und Fehler melden. */
-cleanup_chrdev_class:
-    class_destroy(ds3231_device_class);
-clenup_cdev:
-    cdev_del(&ds3231_cdev);
-unreg_chrdev:
-    unregister_chrdev_region(ds3231_dev, 1);
-    return -EIO;
-}
-
-void ds3231_io_exit(void)
-{
-    device_destroy(ds3231_device_class, ds3231_dev);
-    class_destroy(ds3231_device_class);
-    cdev_del(&ds3231_cdev);
-    unregister_chrdev_region(ds3231_dev, 1);
-    printk("ds3231: unloaded chacter device driver\n");
-}
-
-/**********************************************
- *           Kernel Event Handling            *
- **********************************************/
-
-int ds3231_io_open(struct inode *inode, struct file *file)
-{
-    return 0;
-}
-
-int ds3231_io_close(struct inode *inode, struct file *file)
-{
-    return 0;
-}
-
-/*
-
-Things to keep in mind:
-
-- Leap year compensation only up to 2100
-- Leap year checking in input
-
-*/
-
+/** All month names in German (may be changed) */
 static const char *MONTH_NAMES[] = {
     "Januar",
     "Februar",
@@ -109,10 +30,132 @@ static const char *MONTH_NAMES[] = {
     "September",
     "Oktober",
     "November",
-    "Dezember" };
+    "Dezember"
+};
 
-static const int MONTH_DAYS[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+/** The number of days in each month (february has to be handled differently in leap years.) */
+static const int MONTH_DAYS[] = {
+    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+};
 
+/**
+ * Creates and registers the linux character driver for the ds3231 real-time-clock.
+ * The driver will be created with the name <tt>ds3231_drv</tt> and will allocate
+ * only <tt>1</tt> minor number for the character device.
+ *
+ * @return <tt>0</tt> on success and a kernel error code on failure.
+ * @brief Creates the character device
+ */
+int ds3231_io_init(void) {
+    int ret;
+
+    printk("ds3231: creating character device driver ...\n");
+
+    /* Allocate a range of character device numbers */
+    ret = alloc_chrdev_region(&ds3231_dev, 0, 1, "ds3231_drv");
+    if (ret < 0) {
+        printk(KERN_ERR "ds3231: alloc_chrdev_region() failed\n");
+        return ret;
+    }
+
+    /* Initialize the cdev structure and add the driver to the system */
+    cdev_init(&ds3231_cdev, &ds3231_fops);
+    ret = cdev_add(&ds3231_cdev, ds3231_dev, 1);
+    if (ret < 0) {
+        printk(KERN_ERR "ds3231: character device could not be registered");
+        goto unreg_chrdev;
+    }
+
+    /* Create a character device class */
+    ds3231_device_class = class_create(THIS_MODULE, "chardev");
+    if (ds3231_device_class == NULL) {
+        printk(KERN_ERR "ds3231: character device class could not be created\n");
+        goto clenup_cdev;
+    }
+
+    /* Create the character device */
+    if (device_create(ds3231_device_class, NULL, ds3231_dev, NULL, "ds3231_drv") == NULL) {
+        printk(KERN_ERR "ds3231: character device could not be created\n");
+        goto cleanup_chrdev_class;
+    }
+
+    /* ds3231_drv initialized sucsessfully */
+    printk("ds3231: character device driver successfully created\n");
+    return 0;
+
+
+
+    /*
+     * Uninit on failure
+     */
+cleanup_chrdev_class:
+    class_destroy(ds3231_device_class);
+clenup_cdev:
+    cdev_del(&ds3231_cdev);
+unreg_chrdev:
+    unregister_chrdev_region(ds3231_dev, 1);
+    return -EIO;
+}
+
+/**
+ * Destroys the character device and class and unregisters the character device
+ * driver from the system. Also unregisters the character device region. Always
+ * succeeds.
+ *
+ * @brief Destroys and frees all data associated with the character device driver
+ */
+void ds3231_io_exit(void) {
+    device_destroy(ds3231_device_class, ds3231_dev);
+    class_destroy(ds3231_device_class);
+    cdev_del(&ds3231_cdev);
+    unregister_chrdev_region(ds3231_dev, 1);
+    printk("ds3231: unloaded chacter device driver\n");
+}
+
+/* ========================================================================== *
+ *                            Open/Close Handlers                             *
+ * ========================================================================== */
+
+/**
+ * Does nothing except write a debug message to the kernel log, just here
+ * for completeness.
+ *
+ * @param inode The linux VFS inode for file-system access
+ * @param file The file handle to store specific data and provide information
+ * on how that file was opened.
+ * @return <tt>0</tt>. This function never fails
+ */
+int ds3231_io_open(struct inode *inode, struct file *file) {
+    printk(KERN_DEBUG "ds3231: opened character device\n");
+    return 0;
+}
+
+/**
+ * Does nothing except write a debug message to the kernel log, just here
+ * for completeness.
+ *
+ * @param inode The linux VFS inode for file-system access
+ * @param file The file handle to store specific data and provide information
+ * on how that file was opened.
+ * @return <tt>0</tt>. This function never fails
+ */
+int ds3231_io_close(struct inode *inode, struct file *file) {
+    printk(KERN_DEBUG "ds3231: closed character device\n");
+    return 0;
+}
+
+/* ========================================================================== *
+ *                         User file read event                               *
+ * ========================================================================== */
+
+/**
+ *
+ * @param file
+ * @param buffer
+ * @param bytes
+ * @param offset
+ * @return
+ */
 ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, loff_t *offset)
 {
     ds3231_time_t time;
@@ -145,6 +188,16 @@ ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, lo
     return bytes_to_copy - copy_to_user(buffer, out, bytes_to_copy);
 }
 
+/* ========================================================================== *
+ *                         User file write event                              *
+ * ========================================================================== */
+
+/**
+ *
+ * @param file
+ * @param __user
+ * @return
+ */
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset)
 {
     ds3231_time_t time;

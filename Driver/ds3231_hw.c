@@ -175,7 +175,8 @@ int ds3231_write_time(ds3231_time_t *time)
     RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_DATE, date), retval);
     RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_MONTH, mon), retval);
     RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_YEAR, year), retval);
-    return 0;
+
+    return retval;
 }
 
 

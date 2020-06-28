@@ -149,12 +149,16 @@ int ds3231_io_close(struct inode *inode, struct file *file) {
  * ========================================================================== */
 
 /**
+ * Reads time and status from chip and writes time to file on user read file.
+ * Returns Kernel Error if either the Driver is already busy or the reading
+ * from the chip fails.
  *
- * @param file
- * @param buffer
- * @param bytes
- * @param offset
- * @return
+ * @brief Reads time and status from chip and writes time to file on user read file.
+ * @param file Struct that contains information about the caller and the type of call
+ * @param buffer Space in the userspace the data is to be written
+ * @param bytes number of bytes to be read
+ * @param offset offset inside the file or device
+ * @return <tt>0</tt> on success and number of bytes failed to be written otherwise.
  */
 ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, loff_t *offset)
 {
@@ -193,10 +197,16 @@ ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, lo
  * ========================================================================== */
 
 /**
+ * Reads a time or temperature from the userspace and writes it to the RTC-Chip.
+ * Returns Kernel Error if either the Driver is already busy, the reading of the
+ * data from the file failed or the time read is in a wrong format.
  *
- * @param file
- * @param __user
- * @return
+ * @brief Reads a time or temperature from the userspace and writes it to the RTC-Chip.
+ * @param file Struct that contains information about the caller and the type of call
+ * @param buffer Space in the userspace the data is read from
+ * @param bytes number of bytes to be written
+ * @param offset offset inside the file or device
+ * @return number of bytes to be written otherwise.
  */
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset)
 {
@@ -234,21 +244,21 @@ ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t byt
     }
 
     /* Parse a date */
-    if (sscanf(in, "%d-%d-%d %d:%d:%d", 
-                &year, 
-                &month, 
-                &day, 
-                &hour, 
-                &minute, 
+    if (sscanf(in, "%d-%d-%d %d:%d:%d",
+                &year,
+                &month,
+                &day,
+                &hour,
+                &minute,
                 &second) < 0) {
         atomic_set(&ds3231_status.drv_busy, UNLOCKED);
         return -EINVAL;
     }
 
     /* Make sure month, day of the month, hour, minute and second are in range */
-    if ((12 < month || 1 > month) || 
-        (MONTH_DAYS[month - 1] + (month == 2 ? (year % 4 == 0): 0) < day) || 
-        (23 < hour || 0 > hour) || 
+    if ((12 < month || 1 > month) ||
+        (MONTH_DAYS[month - 1] + (month == 2 ? (year % 4 == 0): 0) < day) ||
+        (23 < hour || 0 > hour) ||
         (59 < minute || 0 > minute) ||
         (59 < second || 0 > second))
     {
@@ -270,7 +280,7 @@ ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t byt
     time.second = second;
 
     printk("ds3231: write time %d. %d. %d %d:%d:%d\n", time.day, time.month, time.year, time.hour, time.minute, time.second);
-    
+
     /* Write the time to the RTC */
     retval = ds3231_write_time(&time);
     atomic_set(&ds3231_status.drv_busy, UNLOCKED);

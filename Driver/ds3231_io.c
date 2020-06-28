@@ -206,7 +206,7 @@ ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, lo
  * @param buffer Space in the userspace the data is read from
  * @param bytes number of bytes to be written
  * @param offset offset inside the file or device
- * @return number of bytes to be written otherwise.
+ * @return return value of ds3231_write_time or number of bytes to be written otherwise.
  */
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset)
 {

@@ -25,8 +25,8 @@
  */
 
 /**
- * @addtogroup Time Registers
- * \ingroup Registers
+ * @addtogroup Time
+ * @ingroup Registers
  *
  * @{
  */
@@ -40,8 +40,8 @@
 /** @} */
 
 /**
- * @addtogroup Alarm Registers
- * \ingroup Registers
+ * @addtogroup Alarm
+ * @ingroup Registers
  *
  * @{
  */
@@ -55,8 +55,8 @@
 /** @} */
 
 /**
- * @addtogroup Status/Control Registers
- * \ingroup Registers
+ * @addtogroup Control
+ * @ingroup Registers
  *
  * @{
  */

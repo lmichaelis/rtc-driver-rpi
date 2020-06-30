@@ -121,6 +121,7 @@ typedef struct _ds3231_status
     atomic_t drv_busy; /**< Busy flag of the driver. Set whenever the driver is interacted with (except on <tt>open()</tt> and <tt>close()</tt>) */
     u8 osf;  /**< Oscillator stop flag of the real-time-clock chip (updated on every read/write operation) */
     s8 temp;  /**< Temperature of the real-time-clock chip (updated on every read/write operation) */
+    u8 drv_temp_test; /**< Set to 1 to disable temperature polling from the RTD*/
 } ds3231_status_t;
 
 extern ds3231_status_t ds3231_status;
@@ -263,6 +264,7 @@ ssize_t ds3231_io_read(struct file *file, char __user *buffer, size_t bytes, lof
  * @see ds3231_write_time(ds3231_time_t*)
  */
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset);
+
 
 /**
  * Writes the time stored in the parameter to the DS3231 RTC chip via the I2C bus.

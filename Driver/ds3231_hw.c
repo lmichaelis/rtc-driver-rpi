@@ -22,10 +22,6 @@ static struct i2c_driver ds3231_hw_driver = {
     .remove = ds3231_hw_remove,
 };
 
-/**********************************************
- *              Init / Exit                   *
- **********************************************/
-
 int ds3231_hw_init(void)
 {
     const struct i2c_board_info info = {I2C_BOARD_INFO("ds3231_drv", 0x68)};

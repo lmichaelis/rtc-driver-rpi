@@ -12,10 +12,7 @@
 #include <asm/delay.h>
 #include <asm/atomic.h>
 
-#define true 1
-#define false 0
 #define null 0
-
 #define LOCKED       0
 #define UNLOCKED     1
 

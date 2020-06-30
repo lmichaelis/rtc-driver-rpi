@@ -1,16 +1,3 @@
-#include <linux/slab.h>
-#include <linux/bcd.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/fs.h>
-#include <linux/i2c.h>
-#include <linux/bcd.h>
-#include <linux/rtc.h>
-#include <linux/interrupt.h>
-#include <linux/uaccess.h>
-#include <asm/errno.h>
-#include <asm/delay.h>
-
 /****************************************************
  * ( ) ds3231_hw.c  :: Hardware interfacing         *
  * ( ) ds3231_io.c  :: Character device interfacing *

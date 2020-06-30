@@ -38,7 +38,6 @@ static const int MONTH_DAYS[] = {
     31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 };
 
-
 int ds3231_io_init(void) {
     int ret;
 
@@ -95,11 +94,6 @@ void ds3231_io_exit(void) {
     printk("ds3231: unloaded chacter device driver\n");
 }
 
-/* ========================================================================== *
- *                            Open/Close Handlers                             *
- * ========================================================================== */
-
-
 int ds3231_io_open(struct inode *inode, struct file *file) {
     printk(KERN_DEBUG "ds3231: opened character device\n");
     return 0;
@@ -110,10 +104,6 @@ int ds3231_io_close(struct inode *inode, struct file *file) {
     printk(KERN_DEBUG "ds3231: closed character device\n");
     return 0;
 }
-
-/* ========================================================================== *
- *                         User file read event                               *
- * ========================================================================== */
 
 
 ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, loff_t *offset)
@@ -147,11 +137,6 @@ ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, lo
     atomic_set(&ds3231_status.drv_busy, UNLOCKED);
     return bytes_to_copy - copy_to_user(buffer, out, bytes_to_copy);
 }
-
-/* ========================================================================== *
- *                         User file write event                              *
- * ========================================================================== */
-
 
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset)
 {

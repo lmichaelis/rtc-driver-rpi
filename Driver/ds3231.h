@@ -251,11 +251,34 @@ ssize_t ds3231_io_read(struct file *file, char __user *buffer, size_t bytes, lof
  */
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset);
 
-/*****************************
- *       Internal API        *
- *****************************/
-
+/**
+ * Writes the time stored in the parameter to the DS3231 RTC chip via the I2C bus.
+ * It first converts the given decimal representation of the time into DS3231-readable
+ * time according to the <tt>Timekeeping Registers</tt> on page 11 of the DS3231 manual.
+ * It then writes these converted values to the DS3231 using the I2C bus. Years are written beginning
+ * from <tt>0</tt> where <tt>0</tt> refers to the year <tt>2000</tt>.
+ *
+ * @param[in] time The time to write to the RTC
+ * @return <tt>0</tt> on success and a kernel error code (returned by <tt>i2c_smbus_write_byte_data</tt>)
+ * on failure.
+ *
+ * @see i2c_smbus_write_byte_data(i2c_client*, u8, u8)
+ */
 int ds3231_write_time(ds3231_time_t *time);
+
+/**
+ * Reads the time from the DS3231 RTC chip into the given <tt>ds3231_time_t</tt> object.
+ * First this function reads all needed data registers from the RTC, then converts them
+ * back to decimal values (according the <tt>Timekeeping Registers</tt> on page 11 of
+ * the DS3231 manual) to return to the caller. Because years are stored as beginning
+ * from <tt>0</tt>, <tt>2000</tt> is added to compensate for that.
+ *
+ * @param[out] time Where to write the time to.
+ * @return <tt>0</tt> on success and a kernel error code (returned by <tt>i2c_smbus_read_byte_data</tt>)
+ * on failure.
+ *
+ * @see i2c_smbus_read_byte_data(i2c_client*, u8)
+ */
 int ds3231_read_time(ds3231_time_t *time);
 
 int ds3231_read_status(void);

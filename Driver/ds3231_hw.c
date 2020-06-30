@@ -5,13 +5,16 @@
  ****************************************************/
 #include "ds3231.h"
 
+/** The I2C client for interfacing with the DS3231 RTC */
 static struct i2c_client *ds3231_client;
 
+/** RTC device ID */
 static const struct i2c_device_id ds3231_id[] = {
     {"ds3231_drv", 0},
     {}};
 MODULE_DEVICE_TABLE(i2c, ds3231_id);
 
+/** RTC driver configuration */
 static struct i2c_driver ds3231_hw_driver = {
     .driver = {
         .owner = THIS_MODULE,
@@ -22,10 +25,6 @@ static struct i2c_driver ds3231_hw_driver = {
     .remove = ds3231_hw_remove,
 };
 
-/**********************************************
- *              Init / Exit                   *
- **********************************************/
-
 int ds3231_hw_init(void)
 {
     const struct i2c_board_info info = {I2C_BOARD_INFO("ds3231_drv", 0x68)};
@@ -34,24 +33,24 @@ int ds3231_hw_init(void)
 
     printk("ds3231: initializing hardware ...\n");
 
+    /* Get the correct I2C adapter to use */
     ds3231_client = null;
     adapter = i2c_get_adapter(1);
-    if (adapter == null)
-    {
+    if (adapter == null) {
         printk(KERN_ERR "ds3231: i2c adapter not found\n");
         return -ENODEV;
     }
 
+    /* Open the correct I2C device */
     ds3231_client = i2c_new_device(adapter, &info);
-    if (ds3231_client == null)
-    {
+    if (ds3231_client == null) {
         printk(KERN_ERR "ds3231: failed to register i2c device\n");
         return -ENODEV;
     }
 
+    /* Register this as a driver */
     rval = i2c_add_driver(&ds3231_hw_driver);
-    if (rval < 0)
-    {
+    if (rval < 0) {
         printk(KERN_ERR "ds3231: failed to ds3231 i2c driver\n");
         i2c_unregister_device(ds3231_client);
         ds3231_client = null;
@@ -61,20 +60,19 @@ int ds3231_hw_init(void)
     return rval;
 }
 
+
 void ds3231_hw_exit(void)
 {
     printk("ds3231: uninitializing hardware ...\n");
     if (ds3231_client != null)
     {
+    	/* Delete the driver and unregister the device. */
         i2c_del_driver(&ds3231_hw_driver);
         i2c_unregister_device(ds3231_client);
         ds3231_client = null;
     }
 }
 
-/**********************************************
- *           Kernel Event Handling            *
- **********************************************/
 
 int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
@@ -83,12 +81,9 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
     printk("ds3231: setting up RTC ...\n");
 
-    /*
-     * Disable Alarm 1, Alarm 2 and interrupts. Enable oscillator
-     */
+    /* Disable Alarm 1, Alarm 2 and interrupts. Enable oscillator */
     data = i2c_smbus_read_byte_data(client, DS3231_REG_CONTROL);
-    if (data < 0)
-    {
+    if (data < 0) {
         goto failed_to_comm;
     }
 
@@ -100,54 +95,41 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
         reg &= ~DS3231_MASK_INTCN;
         reg &= ~DS3231_MASK_EOSC;
 
-        if (i2c_smbus_write_byte_data(client, DS3231_REG_CONTROL, reg) < 0)
-        {
+        if (i2c_smbus_write_byte_data(client, DS3231_REG_CONTROL, reg) < 0) {
             goto failed_to_comm;
         }
 
         printk("ds3231: disabled alarm1, alarm2, interrupts; enabled oscillator.\n");
     }
-    /*
-     * Check oscillator stop flag
-     */
 
+    /* Check oscillator stop flag */
     data = i2c_smbus_read_byte_data(client, DS3231_REG_STATUS);
-    if (data < 0)
-    {
+    if (data < 0) {
         goto failed_to_comm;
     }
 
     reg = (u8)data;
-    if (reg & DS3231_MASK_OSF)
-    {
+    if (reg & DS3231_MASK_OSF) {
         reg &= ~DS3231_MASK_OSF;
 
-        if (i2c_smbus_write_byte_data(client, DS3231_REG_STATUS, reg) < 0)
-        {
+        if (i2c_smbus_write_byte_data(client, DS3231_REG_STATUS, reg) < 0) {
             goto failed_to_comm;
-            ;
         }
 
         printk("ds3231: reset oscillator stop flag (oscillator was stopped).\n");
     }
 
-    /*
-     * Set the RTC to 24 hr mode
-     */
-
+    /* Set the RTC to 24 hr mode */
     data = i2c_smbus_read_byte_data(client, DS3231_REG_HOURS);
-    if (data < 0)
-    {
+    if (data < 0) {
         goto failed_to_comm;
     }
 
     reg = (u8)data;
-    if (reg & DS3231_MASK_HOUR_SELECT)
-    {
+    if (reg & DS3231_MASK_HOUR_SELECT) {
         reg &= ~DS3231_MASK_HOUR_SELECT;
 
-        if (i2c_smbus_write_byte_data(client, DS3231_REG_HOURS, reg) < 0)
-        {
+        if (i2c_smbus_write_byte_data(client, DS3231_REG_HOURS, reg) < 0){
             goto failed_to_comm;
         }
 
@@ -169,8 +151,7 @@ int ds3231_hw_remove(struct i2c_client *client)
 
 #define RETURN_IF_LTZ(x, y) \
     y = x;                  \
-    if (y < 0)              \
-    {                       \
+    if (y < 0) {            \
         return y;           \
     }
 
@@ -179,14 +160,13 @@ int ds3231_write_time(ds3231_time_t *time)
     u8 secs, mins, hrs, date, mon, year;
     int retval;
 
+	/* Convert to binary. See "Timekeeping Registers" on page 11 of the DS3231 manual.*/
     secs = ((time->second / 10) << 4) | (time->second % 10);
     mins = ((time->minute / 10) << 4) | (time->minute % 10);
     hrs = ((time->hour / 20) << 5) | (((time->hour % 20) / 10) << 4) | ((time->hour % 20) % 10);
     date = ((time->day / 10) << 4) | (time->day % 10);
     mon = ((time->year / 100) << 7) | ((time->month / 10) << 4) | ((time->month % 10));
     year = (((time->year % 100) / 10) << 4) | ((time->year % 100) % 10);
-
-    printk("ds3231: raw = %d, %d, %d, %d, %d, %d\n", secs, mins, hrs, date, mon, year);
 
     /* Write to the RTC */
     RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_SECONDS, secs), retval);
@@ -197,6 +177,7 @@ int ds3231_write_time(ds3231_time_t *time)
     RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_YEAR, year), retval);
     return 0;
 }
+
 
 int ds3231_read_time(ds3231_time_t *time)
 {
@@ -218,6 +199,7 @@ int ds3231_read_time(ds3231_time_t *time)
     mon = (u8)reg_mon;
     year = (u8)reg_year;
 
+    /* Convert to decimal. See "Timekeeping Registers" on page 11 of the DS3231 manual.*/
     time->second = 10 * (secs >> 4) + (secs & DS3231_MASK_SECONDS);
     time->minute = 10 * (mins >> 4) + (mins & DS3231_MASK_MINUTES);
     time->hour = 20 * ((hrs >> 5) & 1) + 10 * ((hrs >> 4) & 1) + (hrs & DS3231_MASK_HOUR);
@@ -228,7 +210,6 @@ int ds3231_read_time(ds3231_time_t *time)
     return 0;
 }
 
-/* Whoever this reads is a donkey */
 
 int ds3231_read_status(void)
 {
@@ -240,7 +221,7 @@ int ds3231_read_status(void)
     RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_TEMPMSB), reg_temp);
 
     status = (u8)reg_status;
-    ds3231_status.temp = (s8)reg_temp; 
+    ds3231_status.temp = (s8)reg_temp;
 
     ds3231_status.osf = (status >> 7);
     ds3231_status.rtc_busy = ((status & DS3231_MASK_BSY) << 1);

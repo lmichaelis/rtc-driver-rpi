@@ -32,22 +32,19 @@ int ds3231_hw_init(void)
 
     ds3231_client = null;
     adapter = i2c_get_adapter(1);
-    if (adapter == null)
-    {
+    if (adapter == null) {
         printk(KERN_ERR "ds3231: i2c adapter not found\n");
         return -ENODEV;
     }
 
     ds3231_client = i2c_new_device(adapter, &info);
-    if (ds3231_client == null)
-    {
+    if (ds3231_client == null) {
         printk(KERN_ERR "ds3231: failed to register i2c device\n");
         return -ENODEV;
     }
 
     rval = i2c_add_driver(&ds3231_hw_driver);
-    if (rval < 0)
-    {
+    if (rval < 0) {
         printk(KERN_ERR "ds3231: failed to ds3231 i2c driver\n");
         i2c_unregister_device(ds3231_client);
         ds3231_client = null;
@@ -56,6 +53,7 @@ int ds3231_hw_init(void)
     printk("ds3231: hardware initialization completed.\n");
     return rval;
 }
+
 
 void ds3231_hw_exit(void)
 {

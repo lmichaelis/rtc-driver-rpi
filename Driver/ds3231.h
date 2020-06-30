@@ -116,7 +116,22 @@ typedef struct _ds3231_status
 
 extern ds3231_status_t ds3231_status;
 
+/**
+ * Opens a connection to the I2C bus for communicating with the DS3231 RTC.
+ * Connects to the RTC with address <tt>0x68</tt> on the I2C bus of the system
+ * and creates a new I2C adapter and device. Also registers as an I2C driver.
+ *
+ * @brief Initializes the I2C driver.
+ * @return <tt>0</tt> on success and either <tt>-ENODEV</tt> or the return
+ * value of <tt>i2c_add_driver(i2c_driver*)</tt> on failure.
+ *
+ * @see i2c_add_driver(i2c_driver*)
+ */
 int ds3231_hw_init(void);
+
+/**
+ * Deletes the I2C driver from the system and unregisters the I2C device.
+ */
 void ds3231_hw_exit(void);
 
 /**

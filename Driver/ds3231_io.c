@@ -140,8 +140,6 @@ ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, lo
     /* Bring the time into the correct format */
     memset(out, '\0', sizeof(out));
     snprintf(out, sizeof(out) - 1, "%02d. %s %02d:%02d:%02d %04d", time.day, MONTH_NAMES[time.month - 1], time.hour, time.minute, time.second, time.year);
-    printk("ds3231: read time: %.*s\n", sizeof(out), out);
-
     atomic_set(&ds3231_status.drv_busy, UNLOCKED);
     return bytes_to_copy - copy_to_user(buffer, out, bytes_to_copy);
 }
@@ -167,6 +165,8 @@ ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t byt
             atomic_set(&ds3231_status.drv_busy, UNLOCKED);
             return -ENOEXEC;
         }
+
+        ds3231_status.drv_temp_test = 1;
 
         printk(KERN_ERR "ds3231: manual temperature override: %d°C\n", temp);
         ds3231_status.temp = (s8) temp;

@@ -121,6 +121,7 @@ typedef struct _ds3231_status
     atomic_t drv_busy; /**< Busy flag of the driver. Set whenever the driver is interacted with (except on <tt>open()</tt> and <tt>close()</tt>) */
     u8 osf;  /**< Oscillator stop flag of the real-time-clock chip (updated on every read/write operation) */
     s8 temp;  /**< Temperature of the real-time-clock chip (updated on every read/write operation) */
+    u8 drv_temp_test; /**< Set to 1 to disable temperature polling from the RTD*/
 } ds3231_status_t;
 
 extern ds3231_status_t ds3231_status;
@@ -264,6 +265,7 @@ ssize_t ds3231_io_read(struct file *file, char __user *buffer, size_t bytes, lof
  */
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset);
 
+
 /**
  * Writes the time stored in the parameter to the DS3231 RTC chip via the I2C bus.
  * It first converts the given decimal representation of the time into DS3231-readable
@@ -279,4 +281,32 @@ ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t byt
  */
 int ds3231_write_time(ds3231_time_t *time);
 
+/**
+ * Reads the time from the DS3231 RTC chip into the given <tt>ds3231_time_t</tt> object.
+ * First this function reads all needed data registers from the RTC, then converts them
+ * back to decimal values (according the <tt>Timekeeping Registers</tt> on page 11 of
+ * the DS3231 manual) to return to the caller. Because years are stored as beginning
+ * from <tt>0</tt>, <tt>2000</tt> is added to compensate for that.
+ *
+ * @param[out] time Where to write the time to.
+ * @return <tt>0</tt> on success and a kernel error code (returned by <tt>i2c_smbus_read_byte_data</tt>)
+ * on failure.
+ *
+ * @see i2c_smbus_read_byte_data(i2c_client*, u8)
+ */
+int ds3231_read_time(ds3231_time_t *time);
+
+
+/**
+ * Reads the status and temperature from the DS3231 RTC chip into the global <tt>ds3231_status_t</tt> object.
+ * First this function reads all needed data registers from the RTC and writes them into the global <tt>ds3231_status</tt> object.
+ * If the OSF is set, the control register is read from the RTC and written with activated OSF. The status register is also written
+ * with OSF being set to 0. A kernel error code ist returned in this case.
+ * If the temperature is above 85°C or below -40°C a kernel message is being send.
+ *
+ * @return <tt>0</tt> on success and a kernel error code (returned by <tt>i2c_smbus_read_byte_data</tt>)
+ * on failure. If The OSF of the RTC was set this function returns <tt>-EAGAIN</tt>.
+ *
+ * @see i2c_smbus_read_byte_data(i2c_client*, u8)
+ */
 int ds3231_read_status(void);

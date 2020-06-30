@@ -32,6 +32,7 @@ static int __init ds3231_drv_init(void) {
       ds3231_hw_exit();
     }
 
+    ds3231_status.drv_temp_test = 0;
     atomic_set(&ds3231_status.drv_busy, UNLOCKED);
     return rval;
 }

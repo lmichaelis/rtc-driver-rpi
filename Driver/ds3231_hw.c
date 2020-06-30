@@ -218,11 +218,13 @@ int ds3231_read_status(void)
     u8 status, control;
     int retval = 0;
 
-    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_STATUS), reg_status);
-    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_TEMPMSB), reg_temp);
-
+    RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_STATUS), reg_status);    
     status = (u8)reg_status;
-    ds3231_status.temp = (s8)reg_temp;
+
+    if (!ds3231_status.drv_temp_test) {
+        RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_TEMPMSB), reg_temp);
+        ds3231_status.temp = (s8)reg_temp;
+    }
 
     ds3231_status.osf = (status >> 7);
     ds3231_status.rtc_busy = ((status & DS3231_MASK_BSY) << 1);
@@ -241,5 +243,7 @@ int ds3231_read_status(void)
         printk("ds3231: temperature warning: %d°C\n", ds3231_status.temp);
     }
 
+    /** Reset temperature test flag */
+    ds3231_status.drv_temp_test = 0;
     return retval;
 }

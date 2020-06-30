@@ -120,7 +120,7 @@ ssize_t ds3231_io_read(struct file *file, char __user *buffer, size_t bytes, lof
     ds3231_time_t time;
     char out[28];
     int bytes_to_copy = (bytes > sizeof(out) ? sizeof(out) : bytes);
-    int retval;
+    int retval, bytes_not_copied;
 
 
     /* Make sure the I2C bus is not in use. */
@@ -145,7 +145,8 @@ ssize_t ds3231_io_read(struct file *file, char __user *buffer, size_t bytes, lof
     /* Bring the time into the correct format */
     memset(out, '\0', sizeof(out));
     snprintf(out, sizeof(out) - 1, "%02d. %s %02d:%02d:%02d %04d", time.day, MONTH_NAMES[time.month - 1], time.hour, time.minute, time.second, time.year);
-    return bytes_to_copy - copy_to_user(buffer, out, bytes_to_copy);
+    bytes_not_copied = copy_to_user(buffer, out, bytes_to_copy);
+    return bytes_not_copied != 0 ? -EIO : bytes;
 }
 
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset)
@@ -165,8 +166,12 @@ ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t byt
         return -EBUSY;
     }
 
-    /* Get data from the user */
-    (void)copy_from_user(in, buffer, bytes);
+    /* Get data from the user (while checking that all bytes could be read) */
+    if (copy_from_user(in, buffer, bytes) != 0) {
+        pr_err("ds3231: could not read bytes from userland\n");
+        atomic_set(&ds3231_status.drv_busy, UNLOCKED);
+        return -EINVAL;
+    }
 
     if (in[0] == '$')
     {

@@ -31,39 +31,39 @@ int ds3231_hw_init(void)
     struct i2c_adapter *adapter;
     int rval;
 
-    printk("ds3231: initializing hardware ...\n");
+    pr_info("ds3231: initializing hardware ...\n");
 
     /* Get the correct I2C adapter to use */
     ds3231_client = null;
     adapter = i2c_get_adapter(1);
     if (adapter == null) {
-        printk(KERN_ERR "ds3231: i2c adapter not found\n");
+        pr_err("ds3231: i2c adapter not found\n");
         return -ENODEV;
     }
 
     /* Open the correct I2C device */
     ds3231_client = i2c_new_device(adapter, &info);
     if (ds3231_client == null) {
-        printk(KERN_ERR "ds3231: failed to register i2c device\n");
+        pr_err("ds3231: failed to register i2c device\n");
         return -ENODEV;
     }
 
     /* Register this as a driver */
     rval = i2c_add_driver(&ds3231_hw_driver);
     if (rval < 0) {
-        printk(KERN_ERR "ds3231: failed to ds3231 i2c driver\n");
+        pr_err("ds3231: failed to ds3231 i2c driver\n");
         i2c_unregister_device(ds3231_client);
         ds3231_client = null;
     }
 
-    printk("ds3231: hardware initialization completed.\n");
+    pr_info("ds3231: hardware initialization completed.\n");
     return rval;
 }
 
 
 void ds3231_hw_exit(void)
 {
-    printk("ds3231: uninitializing hardware ...\n");
+    pr_info("ds3231: uninitializing hardware ...\n");
     if (ds3231_client != null)
     {
     	/* Delete the driver and unregister the device. */
@@ -79,7 +79,7 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
     s32 data;
     u8 reg;
 
-    printk("ds3231: setting up RTC ...\n");
+    pr_info("ds3231: setting up RTC ...\n");
 
     /* Disable Alarm 1, Alarm 2 and interrupts. Enable oscillator */
     data = i2c_smbus_read_byte_data(client, DS3231_REG_CONTROL);
@@ -99,7 +99,7 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
             goto failed_to_comm;
         }
 
-        printk("ds3231: disabled alarm1, alarm2, interrupts; enabled oscillator.\n");
+        pr_debug("ds3231: disabled alarm1, alarm2, interrupts; enabled oscillator.\n");
     }
 
     /* Check oscillator stop flag */
@@ -116,7 +116,7 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
             goto failed_to_comm;
         }
 
-        printk("ds3231: reset oscillator stop flag (oscillator was stopped).\n");
+        pr_debug("ds3231: reset oscillator stop flag (oscillator was stopped).\n");
     }
 
     /* Set the RTC to 24 hr mode */
@@ -133,19 +133,19 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
             goto failed_to_comm;
         }
 
-        printk("ds3231: set to 24 hour format.\n");
+        pr_debug("ds3231: set to 24 hour format.\n");
     }
 
     return 0;
 
 failed_to_comm:
-    printk(KERN_ERR "ds3231: device could not be communicated with\n");
+    pr_err("ds3231: device could not be communicated with\n");
     return -ENODEV;
 }
 
 int ds3231_hw_remove(struct i2c_client *client)
 {
-    printk("ds3231: ds3231_remove called\n");
+    pr_err("ds3231: ds3231_remove called\n");
     return 0;
 }
 
@@ -231,7 +231,7 @@ int ds3231_read_status(void)
 
     if (ds3231_status.osf)
     {
-        printk("ds3231: oscillator stopped. restarting ...\n");
+        pr_notice("ds3231: oscillator stopped. restarting ...\n");
         control = i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_CONTROL);
         RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_CONTROL, (control | DS3231_MASK_EOSC)), retval);
         RETURN_IF_LTZ(i2c_smbus_write_byte_data(ds3231_client, DS3231_REG_STATUS, (status & (~DS3231_MASK_OSF))), retval);
@@ -240,7 +240,7 @@ int ds3231_read_status(void)
 
     if ((ds3231_status.temp > 85) || (ds3231_status.temp < -40))
     {
-        printk("ds3231: temperature warning: %d°C\n", ds3231_status.temp);
+        pr_notice("ds3231: temperature warning: %d°C\n", ds3231_status.temp);
     }
 
     /** Reset temperature test flag */

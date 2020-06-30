@@ -100,21 +100,21 @@
 
 typedef struct _ds3231_time
 {
-    u8 second;
-    u8 minute;
-    u8 hour;
+    u8 second; /**< Second part of the time (0-59) */
+    u8 minute; /**< Minute part of the time (0-59) */
+    u8 hour; /**< Hour part of the time (0-23) */
 
-    u8 month;
-    u8 day;
-    u16 year;
+    u8 month;  /**< Month part of the time (1-12) */
+    u8 day;  /**< Day of the month part of the time (0-32) */
+    u16 year;  /**< Year part of the time (2000-2199) */
 } ds3231_time_t;
 
 typedef struct _ds3231_status
 {
-    u8 rtc_busy;
-    atomic_t drv_busy;
-    u8 osf;
-    s8 temp;
+    u8 rtc_busy; /**< Busy flag of the real-time-clock chip (updated on every read/write operation) */
+    atomic_t drv_busy; /**< Busy flag of the driver. Set whenever the driver is interacted with (except on <tt>open()</tt> and <tt>close()</tt>) */
+    u8 osf;  /**< Oscillator stop flag of the real-time-clock chip (updated on every read/write operation) */
+    s8 temp;  /**< Temperature of the real-time-clock chip (updated on every read/write operation) */
 } ds3231_status_t;
 
 extern ds3231_status_t ds3231_status;
@@ -122,15 +122,95 @@ extern ds3231_status_t ds3231_status;
 int ds3231_hw_init(void);
 void ds3231_hw_exit(void);
 
+/**
+ * Creates and registers the linux character driver for the ds3231 real-time-clock.
+ * The driver will be created with the name <tt>ds3231_drv</tt> and will allocate
+ * only <tt>1</tt> minor number for the character device.
+ *
+ * @return <tt>0</tt> on success and a kernel error code on failure. Should <tt>alloc_chrdev_region</tt> fail
+ * it's return value will be returned. Otherwise <tt>-EIO</tt> will be returned.
+ * @brief Creates the character device
+ */
 int ds3231_io_init(void);
+
+/**
+ * Destroys the character device and class and unregisters the character device
+ * driver from the system. Also unregisters the character device region. Always
+ * succeeds.
+ *
+ * @brief Destroys and frees all data associated with the character device driver
+ */
 void ds3231_io_exit(void);
 
 int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id);
 int ds3231_hw_remove(struct i2c_client *client);
 
+/**
+ * Does nothing except write a debug message to the kernel log, just here
+ * for completeness.
+ *
+ * @param inode The linux VFS inode for file-system access
+ * @param file The file handle to store specific data and provide information
+ * on how that file was opened.
+ * @return <tt>0</tt>. This function never fails
+ */
 int ds3231_io_open(struct inode *inode, struct file *file);
+
+/**
+ * Does nothing except write a debug message to the kernel log, just here
+ * for completeness.
+ *
+ * @param inode The linux VFS inode for file-system access
+ * @param file The file handle to store specific data and provide information
+ * on how that file was opened.
+ * @return <tt>0</tt>. This function never fails
+ */
 int ds3231_io_close(struct inode *inode, struct file *file);
+
+/**
+ * Reads time and status from the RTC chip and writes it to a user-controlled character
+ * device. It will be written to the character device in the format <tt>DD. M HH:MM:SS YYYY</tt>
+ * where <tt>M</tt> refers to the full month name in German (see <tt>MONTH_NAMES</tt>).
+ * Returns a kernel error code if either the Driver is already busy or the reading
+ * from the chip fails.
+ *
+ * @brief Reads time and status from chip and writes  it to a user-controlled character device.
+ * @param file Struct that contains information about the caller and the type of call
+ * @param buffer Memory in userspace the data is to be written
+ * @param bytes number of bytes to be read
+ * @param offset offset inside the file or device
+ * @return <ul><li><tt>-EBUSY</tt> if the driver is currently busy,</li><li><tt>-EAGAIN</tt> if the RTC's
+ * oscillator was stopped (see <tt>ds3231_read_status(void)</tt>),</li><li>If there was
+ * an error writing to the RTC <tt>-ENODEV</tt> is returned.</li></ul>otherwise the number of bytes left uncopied.
+ *
+ * @see MONTH_NAMES
+ * @see ds3231_read_status(void)
+ * @see ds3231_read_time(ds3231_time_t*)
+ */
 ssize_t ds3231_io_read(struct file *file, char __user *puffer, size_t bytes, loff_t *offset);
+
+/**
+ * Reads a time or temperature from userspace and writes it to the RTC-Chip.
+ * Returns a kernel error code if either the driver is already busy, the
+ * oscillator of the RTC stopped, the time provided is in a wrong format or
+ * writing the time to the RTC failed.
+ *
+ * @brief Reads a time or temperature from userspace and writes it to the RTC-Chip.
+ * @param file Struct that contains information about the caller and the type of call
+ * @param buffer Space in userspace the data is read from
+ * @param bytes number of bytes to be written
+ * @param offset offset inside the file or device
+ * @return <ul><li><tt>-EBUSY</tt> if the driver is currently busy,</li><li><tt>-ENOEXEC</tt> if
+ * the format of the provided string is incorrect,</li><li><tt>-EAGAIN</tt> if the RTC's
+ * oscillator was stopped (see <tt>ds3231_read_status(void)</tt>),
+ * </li><li><tt>-EINVAL</tt> if the fields of the input are out of range (ie. 78 seconds),
+ * </li><li><tt>-EOVERFLOW</tt> if the provided date is before the year 2000 or after the
+ * year 2199.</li><li>If there was an error writing to the RTC <tt>-ENODEV</tt> is returned.</li></ul>
+ * Otherwise the number of bytes processed is returned.
+ *
+ * @see ds3231_read_status(void)
+ * @see ds3231_write_time(ds3231_time_t*)
+ */
 ssize_t ds3231_io_write(struct file *file, const char __user *puffer, size_t bytes, loff_t *offset);
 
 /*****************************

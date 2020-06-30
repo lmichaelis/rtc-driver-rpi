@@ -142,15 +142,36 @@ int ds3231_io_init(void);
  */
 void ds3231_io_exit(void);
 
+/**
+ * Configures the real-time-clock for driver usage by <ol><li>Disabling interrupts
+ * and alarms</li><li>Re-enabling the oscillator and</li><li>setting the RTC to
+ * 24hr mode</li></ol>
+ * This method is called by the linux kernel.
+ *
+ * @brief Sets up the real-time-clock.
+ * @param[in] client The I2C client for communicating with the RTC
+ * @param[in] id The device id of the RTC (unused)
+ * @return <tt>0</tt> on success and <tt>-ENODEV</tt> on failure.
+ */
 int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id);
+
+/**
+ * Does nothing except write a debug message to the kernel log, just here
+ * for completeness.
+ * This method is called by the linux kernel.
+ *
+ * @param[in] client The I2C client being removed
+ * @return <tt>0</tt>. This function never fails.
+ */
 int ds3231_hw_remove(struct i2c_client *client);
 
 /**
  * Does nothing except write a debug message to the kernel log, just here
  * for completeness.
+ * This method is called by the linux kernel.
  *
- * @param inode The linux VFS inode for file-system access
- * @param file The file handle to store specific data and provide information
+ * @param[in] inode The linux VFS inode for file-system access
+ * @param[in] file The file handle to store specific data and provide information
  * on how that file was opened.
  * @return <tt>0</tt>. This function never fails
  */
@@ -159,9 +180,10 @@ int ds3231_io_open(struct inode *inode, struct file *file);
 /**
  * Does nothing except write a debug message to the kernel log, just here
  * for completeness.
+ * This method is called by the linux kernel.
  *
- * @param inode The linux VFS inode for file-system access
- * @param file The file handle to store specific data and provide information
+ * @param[in] inode The linux VFS inode for file-system access
+ * @param[in] file The file handle to store specific data and provide information
  * on how that file was opened.
  * @return <tt>0</tt>. This function never fails
  */
@@ -174,11 +196,13 @@ int ds3231_io_close(struct inode *inode, struct file *file);
  * Returns a kernel error code if either the Driver is already busy or the reading
  * from the chip fails.
  *
+ * This method is called by the linux kernel.
+ *
  * @brief Reads time and status from chip and writes  it to a user-controlled character device.
- * @param file Struct that contains information about the caller and the type of call
- * @param buffer Memory in userspace the data is to be written
- * @param bytes number of bytes to be read
- * @param offset offset inside the file or device
+ * @param[in] file Struct that contains information about the caller and the type of call
+ * @param[out] buffer Memory in userspace the data is to be written
+ * @param[in] bytes number of bytes to be read
+ * @param[in] offset offset inside the file or device
  * @return <ul><li><tt>-EBUSY</tt> if the driver is currently busy,</li><li><tt>-EAGAIN</tt> if the RTC's
  * oscillator was stopped (see <tt>ds3231_read_status(void)</tt>),</li><li>If there was
  * an error writing to the RTC <tt>-ENODEV</tt> is returned.</li></ul>otherwise the number of bytes left uncopied.
@@ -187,7 +211,7 @@ int ds3231_io_close(struct inode *inode, struct file *file);
  * @see ds3231_read_status(void)
  * @see ds3231_read_time(ds3231_time_t*)
  */
-ssize_t ds3231_io_read(struct file *file, char __user *puffer, size_t bytes, loff_t *offset);
+ssize_t ds3231_io_read(struct file *file, char __user *buffer, size_t bytes, loff_t *offset);
 
 /**
  * Reads a time or temperature from userspace and writes it to the RTC-Chip.
@@ -195,11 +219,13 @@ ssize_t ds3231_io_read(struct file *file, char __user *puffer, size_t bytes, lof
  * oscillator of the RTC stopped, the time provided is in a wrong format or
  * writing the time to the RTC failed.
  *
+ * This method is called by the linux kernel.
+ *
  * @brief Reads a time or temperature from userspace and writes it to the RTC-Chip.
- * @param file Struct that contains information about the caller and the type of call
- * @param buffer Space in userspace the data is read from
- * @param bytes number of bytes to be written
- * @param offset offset inside the file or device
+ * @param[in] file Struct that contains information about the caller and the type of call
+ * @param[in] buffer Space in userspace the data is read from
+ * @param[in] bytes number of bytes to be written
+ * @param[in] offset offset inside the file or device
  * @return <ul><li><tt>-EBUSY</tt> if the driver is currently busy,</li><li><tt>-ENOEXEC</tt> if
  * the format of the provided string is incorrect,</li><li><tt>-EAGAIN</tt> if the RTC's
  * oscillator was stopped (see <tt>ds3231_read_status(void)</tt>),
@@ -211,7 +237,7 @@ ssize_t ds3231_io_read(struct file *file, char __user *puffer, size_t bytes, lof
  * @see ds3231_read_status(void)
  * @see ds3231_write_time(ds3231_time_t*)
  */
-ssize_t ds3231_io_write(struct file *file, const char __user *puffer, size_t bytes, loff_t *offset);
+ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset);
 
 /*****************************
  *       Internal API        *

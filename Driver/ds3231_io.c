@@ -76,9 +76,7 @@ int ds3231_io_init(void) {
     printk("ds3231: character device driver successfully created\n");
     return 0;
 
-    /*
-     * Uninit on failure
-     */
+    /* Uninit on failure */
 cleanup_chrdev_class:
     class_destroy(ds3231_device_class);
 clenup_cdev:

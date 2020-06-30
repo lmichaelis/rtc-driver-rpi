@@ -72,9 +72,6 @@ void ds3231_hw_exit(void)
     }
 }
 
-/**********************************************
- *           Kernel Event Handling            *
- **********************************************/
 
 int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
@@ -83,12 +80,9 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
     printk("ds3231: setting up RTC ...\n");
 
-    /*
-     * Disable Alarm 1, Alarm 2 and interrupts. Enable oscillator
-     */
+    /* Disable Alarm 1, Alarm 2 and interrupts. Enable oscillator */
     data = i2c_smbus_read_byte_data(client, DS3231_REG_CONTROL);
-    if (data < 0)
-    {
+    if (data < 0) {
         goto failed_to_comm;
     }
 
@@ -100,54 +94,42 @@ int ds3231_hw_probe(struct i2c_client *client, const struct i2c_device_id *id)
         reg &= ~DS3231_MASK_INTCN;
         reg &= ~DS3231_MASK_EOSC;
 
-        if (i2c_smbus_write_byte_data(client, DS3231_REG_CONTROL, reg) < 0)
-        {
+        if (i2c_smbus_write_byte_data(client, DS3231_REG_CONTROL, reg) < 0) {
             goto failed_to_comm;
         }
 
         printk("ds3231: disabled alarm1, alarm2, interrupts; enabled oscillator.\n");
     }
-    /*
-     * Check oscillator stop flag
-     */
 
+    /* Check oscillator stop flag */
     data = i2c_smbus_read_byte_data(client, DS3231_REG_STATUS);
-    if (data < 0)
-    {
+    if (data < 0) {
         goto failed_to_comm;
     }
 
     reg = (u8)data;
-    if (reg & DS3231_MASK_OSF)
-    {
+    if (reg & DS3231_MASK_OSF) {
         reg &= ~DS3231_MASK_OSF;
 
-        if (i2c_smbus_write_byte_data(client, DS3231_REG_STATUS, reg) < 0)
-        {
+        if (i2c_smbus_write_byte_data(client, DS3231_REG_STATUS, reg) < 0) {
             goto failed_to_comm;
-            ;
         }
 
         printk("ds3231: reset oscillator stop flag (oscillator was stopped).\n");
     }
 
-    /*
-     * Set the RTC to 24 hr mode
-     */
+    /* Set the RTC to 24 hr mode */
 
     data = i2c_smbus_read_byte_data(client, DS3231_REG_HOURS);
-    if (data < 0)
-    {
+    if (data < 0) {
         goto failed_to_comm;
     }
 
     reg = (u8)data;
-    if (reg & DS3231_MASK_HOUR_SELECT)
-    {
+    if (reg & DS3231_MASK_HOUR_SELECT) {
         reg &= ~DS3231_MASK_HOUR_SELECT;
 
-        if (i2c_smbus_write_byte_data(client, DS3231_REG_HOURS, reg) < 0)
-        {
+        if (i2c_smbus_write_byte_data(client, DS3231_REG_HOURS, reg) < 0){
             goto failed_to_comm;
         }
 
@@ -169,8 +151,7 @@ int ds3231_hw_remove(struct i2c_client *client)
 
 #define RETURN_IF_LTZ(x, y) \
     y = x;                  \
-    if (y < 0)              \
-    {                       \
+    if (y < 0) {            \
         return y;           \
     }
 
@@ -240,7 +221,7 @@ int ds3231_read_status(void)
     RETURN_IF_LTZ(i2c_smbus_read_byte_data(ds3231_client, DS3231_REG_TEMPMSB), reg_temp);
 
     status = (u8)reg_status;
-    ds3231_status.temp = (s8)reg_temp; 
+    ds3231_status.temp = (s8)reg_temp;
 
     ds3231_status.osf = (status >> 7);
     ds3231_status.rtc_busy = ((status & DS3231_MASK_BSY) << 1);

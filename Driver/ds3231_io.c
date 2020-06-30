@@ -43,7 +43,8 @@ static const int MONTH_DAYS[] = {
  * The driver will be created with the name <tt>ds3231_drv</tt> and will allocate
  * only <tt>1</tt> minor number for the character device.
  *
- * @return <tt>0</tt> on success and a kernel error code on failure.
+ * @return <tt>0</tt> on success and a kernel error code on failure. Should <tt>alloc_chrdev_region</tt> fail
+ * it's return value will be returned. Otherwise <tt>-EIO</tt> will be returned.
  * @brief Creates the character device
  */
 int ds3231_io_init(void) {
@@ -79,11 +80,9 @@ int ds3231_io_init(void) {
         goto cleanup_chrdev_class;
     }
 
-    /* ds3231_drv initialized sucsessfully */
+    /* ds3231_drv initialized successfully */
     printk("ds3231: character device driver successfully created\n");
     return 0;
-
-
 
     /*
      * Uninit on failure
@@ -149,16 +148,24 @@ int ds3231_io_close(struct inode *inode, struct file *file) {
  * ========================================================================== */
 
 /**
- * Reads time and status from chip and writes time to file on user read file.
- * Returns Kernel Error if either the Driver is already busy or the reading
+ * Reads time and status from the RTC chip and writes it to a user-controlled character
+ * device. It will be written to the character device in the format <tt>DD. M HH:MM:SS YYYY</tt>
+ * where <tt>M</tt> refers to the full month name in German (see <tt>MONTH_NAMES</tt>).
+ * Returns a kernel error code if either the Driver is already busy or the reading
  * from the chip fails.
  *
- * @brief Reads time and status from chip and writes time to file on user read file.
+ * @brief Reads time and status from chip and writes  it to a user-controlled character device.
  * @param file Struct that contains information about the caller and the type of call
- * @param buffer Space in the userspace the data is to be written
+ * @param buffer Memory in userspace the data is to be written
  * @param bytes number of bytes to be read
  * @param offset offset inside the file or device
- * @return <tt>0</tt> on success and number of bytes failed to be written otherwise.
+ * @return <ul><li><tt>-EBUSY</tt> if the driver is currently busy,</li><li><tt>-EAGAIN</tt> if the RTC's
+ * oscillator was stopped (see <tt>ds3231_read_status(void)</tt>),</li><li>If there was
+ * an error writing to the RTC <tt>-ENODEV</tt> is returned.</li></ul>otherwise the number of bytes left uncopied.
+ *
+ * @see MONTH_NAMES
+ * @see ds3231_read_status(void)
+ * @see ds3231_read_time(ds3231_time_t*)
  */
 ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, loff_t *offset)
 {
@@ -197,16 +204,26 @@ ssize_t ds3231_io_read(struct file * file, char __user *buffer, size_t bytes, lo
  * ========================================================================== */
 
 /**
- * Reads a time or temperature from the userspace and writes it to the RTC-Chip.
- * Returns Kernel Error if either the Driver is already busy, the reading of the
- * data from the file failed or the time read is in a wrong format.
+ * Reads a time or temperature from userspace and writes it to the RTC-Chip.
+ * Returns a kernel error code if either the driver is already busy, the
+ * oscillator of the RTC stopped, the time provided is in a wrong format or
+ * writing the time to the RTC failed.
  *
- * @brief Reads a time or temperature from the userspace and writes it to the RTC-Chip.
+ * @brief Reads a time or temperature from userspace and writes it to the RTC-Chip.
  * @param file Struct that contains information about the caller and the type of call
- * @param buffer Space in the userspace the data is read from
+ * @param buffer Space in userspace the data is read from
  * @param bytes number of bytes to be written
  * @param offset offset inside the file or device
- * @return return value of ds3231_write_time or number of bytes to be written otherwise.
+ * @return <ul><li><tt>-EBUSY</tt> if the driver is currently busy,</li><li><tt>-ENOEXEC</tt> if
+ * the format of the provided string is incorrect,</li><li><tt>-EAGAIN</tt> if the RTC's
+ * oscillator was stopped (see <tt>ds3231_read_status(void)</tt>),
+ * </li><li><tt>-EINVAL</tt> if the fields of the input are out of range (ie. 78 seconds),
+ * </li><li><tt>-EOVERFLOW</tt> if the provided date is before the year 2000 or after the
+ * year 2199.</li><li>If there was an error writing to the RTC <tt>-ENODEV</tt> is returned.</li></ul>
+ * Otherwise the number of bytes processed is returned.
+ *
+ * @see ds3231_read_status(void)
+ * @see ds3231_write_time(ds3231_time_t*)
  */
 ssize_t ds3231_io_write(struct file *file, const char __user *buffer, size_t bytes, loff_t *offset)
 {

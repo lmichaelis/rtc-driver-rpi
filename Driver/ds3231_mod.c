@@ -17,6 +17,7 @@ ds3231_status_t ds3231_status;
  *
  * @see ds3231_hw_init(void)
  * @see ds3231_io_init(void)
+ * @ingroup Initialization
  *
  * @brief Initializes the ds3231 RTC driver.
  */
@@ -44,6 +45,7 @@ static int __init ds3231_drv_init(void) {
  *
  * @see ds3231_hw_exit(void)
  * @see ds3231_io_exit(void)
+ * @ingroup Termination
  *
  * @brief Uninitializes the ds3231 RTC driver.
  */

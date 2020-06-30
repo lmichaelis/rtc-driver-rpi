@@ -5,13 +5,16 @@
  ****************************************************/
 #include "ds3231.h"
 
+/** The I2C client for interfacing with the DS3231 RTC */
 static struct i2c_client *ds3231_client;
 
+/** RTC device ID */
 static const struct i2c_device_id ds3231_id[] = {
     {"ds3231_drv", 0},
     {}};
 MODULE_DEVICE_TABLE(i2c, ds3231_id);
 
+/** RTC driver configuration */
 static struct i2c_driver ds3231_hw_driver = {
     .driver = {
         .owner = THIS_MODULE,

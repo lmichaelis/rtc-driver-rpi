@@ -21,6 +21,16 @@
  */
 
 /**
+ * @defgroup Initialization
+ * Initialization functions
+ */
+
+/**
+ * @defgroup Termination
+ * Termination functions
+ */
+
+/**
  * @addtogroup Time
  * @ingroup Registers
  *
@@ -125,11 +135,13 @@ extern ds3231_status_t ds3231_status;
  * value of <tt>i2c_add_driver(i2c_driver*)</tt> on failure.
  *
  * @see i2c_add_driver(i2c_driver*)
+ * @ingroup Initialization
  */
 int ds3231_hw_init(void);
 
 /**
  * Deletes the I2C driver from the system and unregisters the I2C device.
+ * @ingroup Termination
  */
 void ds3231_hw_exit(void);
 
@@ -141,6 +153,7 @@ void ds3231_hw_exit(void);
  * @return <tt>0</tt> on success and a kernel error code on failure. Should <tt>alloc_chrdev_region</tt> fail
  * it's return value will be returned. Otherwise <tt>-EIO</tt> will be returned.
  * @brief Creates the character device
+ * @ingroup Initialization
  */
 int ds3231_io_init(void);
 
@@ -150,6 +163,7 @@ int ds3231_io_init(void);
  * succeeds.
  *
  * @brief Destroys and frees all data associated with the character device driver
+ * @ingroup Termination
  */
 void ds3231_io_exit(void);
 
@@ -280,4 +294,17 @@ int ds3231_write_time(ds3231_time_t *time);
  */
 int ds3231_read_time(ds3231_time_t *time);
 
+
+/**
+ * Reads the status and temperature from the DS3231 RTC chip into the global <tt>ds3231_status_t</tt> object.
+ * First this function reads all needed data registers from the RTC and writes them into the global <tt>ds3231_status</tt> object.
+ * If the OSF is set, the control register is read from the RTC and written with activated OSF. The status register is also written
+ * with OSF being set to 0. A kernel error code ist returned in this case.
+ * If the temperature is above 85°C or below -40°C a kernel message is being send.
+ *
+ * @return <tt>0</tt> on success and a kernel error code (returned by <tt>i2c_smbus_read_byte_data</tt>)
+ * on failure. If The OSF of the RTC was set this function returns <tt>-EAGAIN</tt>.
+ *
+ * @see i2c_smbus_read_byte_data(i2c_client*, u8)
+ */
 int ds3231_read_status(void);

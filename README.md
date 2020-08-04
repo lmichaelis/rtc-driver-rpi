@@ -4,8 +4,6 @@ This is a driver for the DS3231 RTC Chip.
 This repository contains code that was written for a university assignment. It is a simple linux device driver for the DS3231 real-time-clock. The target hardware 
 was a _Raspberry Pi 3 Model B v1.1_ (revision code `a01041`) using _Raspbian 8 (jesse)_ with Linux Kernel version `4.9.30-v7+`.
 
-TODO: Connection of the chip with the raspberry (which GPIO pins etc)
-
 It suports reading the time from the chip (`cat /dev/ds3231`) in the format `DD. M hh:mm:ss YYYY` (month names are german currently). It also supports writing the current time to the RTC by writing a date of format `YYYY-MM-DD hh:mm:ss` to `/dev/ds3231`.
 
 # Compiling
